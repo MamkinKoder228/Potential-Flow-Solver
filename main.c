@@ -13,33 +13,29 @@ int main(void){
 	char string[64];
 
 	InitWindow(WIDTH, HEIGHT, "Potential Flow");
-	InitField(Field, WIDTH, HEIGHT, 1000, 0/180.0 * M_PI);
+	InitField(Field, WIDTH, HEIGHT, 10, 0/180.0 * M_PI);
 
 
-	PointsDA Wall = CreatePointDA();
-
-	// for (int y = -32; y <= 32; ++y)
-	// 	AddPointToDA(&Wall, WIDTH/2, HEIGHT/2 + y);
-		// for (int x = -32; x <= 32; ++x)
-
-
-	for (int x = -64; x <= 64; ++x){
-		for (int y = -64; y <= 64; ++y){
-			if (x*x + y*y <= 64){
-				AddPointToDA(&Wall, WIDTH/2 + x, HEIGHT/2 + y);
-				// AddPointToDA(&Wall, WIDTH/2 + x + 32, HEIGHT/2 + y);
-			}
-		}
-	}
+	Boundary B = CreateBoundary();
+	BoundaryAddSegment(&B, WIDTH/2, HEIGHT/2 + 10, WIDTH/2 + 10, HEIGHT/2 - 10);
+	// float R = 32;
+	// float dA = 0.05;
+	// for (float alpha = 0; alpha < 2 * M_PI; alpha += dA){
+	// 	BoundaryAddSegment(&B, WIDTH/2 + R * cos(alpha), HEIGHT/2 + R * sin(alpha), WIDTH/2 + R * cos(alpha + dA), HEIGHT/2 + R * sin(alpha + dA));
+	// 	// BoundaryAddSegment(&B, WIDTH/2 + R * cos(alpha) - 1, HEIGHT/2 + R * sin(alpha) - 1, WIDTH/2 + R * cos(alpha) - 1, HEIGHT/2 + R * sin(alpha) + 1);
+	// 	// BoundaryAddSegment(&B, WIDTH/2 + R * cos(alpha) - 1, HEIGHT/2 + R * sin(alpha) + 1, WIDTH/2 + R * cos(alpha) + 1, HEIGHT/2 + R * sin(alpha) + 1);
+	// 	// BoundaryAddSegment(&B, WIDTH/2 + R * cos(alpha) + 1, HEIGHT/2 + R * sin(alpha) + 1, WIDTH/2 + R * cos(alpha) + 1, HEIGHT/2 + R * sin(alpha) - 1);
+	// 	// BoundaryAddSegment(&B, WIDTH/2 + R * cos(alpha) + 1, HEIGHT/2 + R * sin(alpha) - 1, WIDTH/2 + R * cos(alpha) - 1, HEIGHT/2 + R * sin(alpha) - 1);
+	// }
 
 	float vel;
 	while (!(xkbhit() && lastkey() == 'q')){
-		SolveFieldDivergence(Field, WIDTH, HEIGHT, 1.4); 
-		// SolveFieldDivergence(Field, WIDTH, HEIGHT, 1.4); 
-		SolveForNoPenetration(Field, Wall, WIDTH, HEIGHT, 1.5);
-		DrawField(Field, WIDTH, HEIGHT, CMAP_NCV);
-		DrawIsopotentials(Field, WIDTH, HEIGHT, 32);
-		// DrawVelocityMagnitude(Field, WIDTH, HEIGHT, CMAP_BLR);
+		SolveFieldDivergence(Field, WIDTH, HEIGHT, 1.6); 
+		SolveForNoPenetration(Field, &B, WIDTH, HEIGHT, 0.3);
+		DrawVelocityMagnitude(Field, WIDTH, HEIGHT, CMAP_BLR);
+		// DrawField(Field, WIDTH, HEIGHT, CMAP_NCV);
+		DrawBoundary(&B);
+		// DrawIsopotentials(Field, WIDTH, HEIGHT, 32);
 		// DrawStreamlines(Field, WIDTH, HEIGHT, 30);
 		// DrawVelocityField(Field, WIDTH, HEIGHT);
 		// DrawDivergence(Field, WIDTH, HEIGHT, CMAP_BLR);
@@ -54,6 +50,7 @@ int main(void){
 
 		// sprintf(string, "%.3f", vel);
 		// outtextxy(0, 2, string);
+		// delay(50);
 		refresh();
 		cleardevice();
 

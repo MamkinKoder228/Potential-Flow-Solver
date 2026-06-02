@@ -1,23 +1,48 @@
 #include <stdlib.h>
 #define map(val, m0, M0, m1, M1) (val - m0) / (M0 - m0) * (M1 - m1) + m1
-#define POINTS_INIT_CAPACITY 64
-#define NO_PENETRATION_DEPTH 1
+#define BOUNDARY_INIT_CAPACITY 64
 
 typedef struct {
-	int x, y;
-} Point;
+	double x0, y0;
+	double x1, y1;
+} BoundarySegment;
 
 typedef struct {
-	Point *Points;
+	BoundarySegment *Segments;
+	size_t SegmentCount;
 	size_t Capacity;
-	size_t Count;
-} PointsDA;
+} Boundary;
 
+
+Boundary CreateBoundary();
+void BoundaryAddSegment(Boundary *B, double x0, double y0, double x1, double y1);
+void DrawBoundary(Boundary *B);
 void InitField(double Field[], size_t width, size_t height, double Velocity, double alpha);
 void SolveFieldDivergence(double Field[], size_t width, size_t height, double speed);
-PointsDA CreatePointDA(void);
-void AddPointToDA(PointsDA *Points, int x, int y);
-void SolveForNoPenetration(double Field[], PointsDA Points, size_t width, size_t height, float speed);
+void SolveForNoPenetration(double Field[], Boundary *B, size_t width, size_t height, float speed);
+
+Boundary CreateBoundary(){
+	Boundary B = {malloc(sizeof(BoundarySegment) * BOUNDARY_INIT_CAPACITY), 0, BOUNDARY_INIT_CAPACITY};
+	return B;
+}
+
+void BoundaryAddSegment(Boundary *B, double x0, double y0, double x1, double y1){
+	if (B->SegmentCount >= B->Capacity){
+		B->Capacity += BOUNDARY_INIT_CAPACITY;
+		B->Segments = realloc(B->Segments, B->Capacity * sizeof(BoundarySegment));
+	}
+	B->Segments[B->SegmentCount].x0 = x0;
+	B->Segments[B->SegmentCount].y0 = y0;
+	B->Segments[B->SegmentCount].x1 = x1;
+	B->Segments[B->SegmentCount++].y1 = y1;
+}
+
+void DrawBoundary(Boundary *B){
+	setcolor(GREEN);
+	for (int i = 0; i < B->SegmentCount; ++i){
+		line(B->Segments[i].x0, B->Segments[i].y0, B->Segments[i].x1, B->Segments[i].y1);
+	}
+}
 
 void InitField(double Field[], size_t width, size_t height, double Velocity, double alpha){
 	for (size_t y = 0; y < height; ++y){
@@ -39,76 +64,62 @@ void SolveFieldDivergence(double Field[], size_t width, size_t height, double sp
 	}
 }
 
-PointsDA CreatePointDA(void){
-	PointsDA Points = {malloc(sizeof(Point) * POINTS_INIT_CAPACITY), POINTS_INIT_CAPACITY, 0};
-	return Points;
-}
 
-void AddPointToDA(PointsDA *Points, int x, int y){
-	Point P = {x, y};
-	if (Points->Count >= Points->Capacity){
-		Points->Capacity += POINTS_INIT_CAPACITY;
-		Points->Points = realloc(Points->Points, Points->Capacity * sizeof(Point));
-	}
-	Points->Points[Points->Count++] = P;
-}
+void SolveForNoPenetration(double Field[], Boundary *B, size_t width, size_t height, float speed){
+	for (int i = 0; i < B->SegmentCount; ++i){
+		int x0 = B->Segments[i].x0;
+		int y0 = B->Segments[i].y0;
+		int x1 = B->Segments[i].x1;
+		int y1 = B->Segments[i].y1;
 
-void SolveForNoPenetration(double Field[], PointsDA Points, size_t width, size_t height, float speed){
-	for (int i = 0; i < Points.Count; ++i){
-		double Avg = 0;
-		int x = Points.Points[i].x;
-		int y = Points.Points[i].y;
-
-
-		// X-axis
-		for (int d = -NO_PENETRATION_DEPTH; d <= NO_PENETRATION_DEPTH; ++d){
-			Avg += Field[x + d + y * width];
+		if (B->Segments[i].x0 == B->Segments[i].x1){
+			for (size_t y = fmin(y0, y1); y < fmax(y0, y1); ++y){
+				float a = ((Field[x0 + y * width] + Field[x0 - 1 + y * width])/2 - Field[x0 + 1 + y * width]) * speed;
+				float b = ((Field[x0 + 1 + y * width] + Field[x0 + y * width])/2 - Field[x0 - 1 + y * width]) * speed;
+				Field[x0 + 1 + y * width] += a;
+				// Field[x0 + y * width] += ((Field[x0 + 1 + y * width] + Field[x0 - 1 + y * width])/2 - Field[x0 + y * width]) * speed;
+				Field[x0 - 1 + y * width] += b;
+			}
 		}
+		else if (B->Segments[i].y0 == B->Segments[i].y1){
+			for (size_t x = fmin(x0, x1); x < fmax(x0, x1); ++x){
+				float a = ((Field[x + y0 * width] + Field[x + (y0 - 1) * width])/2 - Field[x + (y0 + 1) * width]) * speed;
+				float b = ((Field[x + (y0 + 1) * width] + Field[x + y0 * width])/2 - Field[x + (y0 - 1) * width]) * speed;
+				Field[x + (y0 + 1) * width] += a;
+				// Field[x + y0 * width] += ((Field[x + (y0 + 1) * width] + Field[x + (y0 - 1) * width])/2 - Field[x + y0 * width]) * speed;
+				Field[x + (y0 - 1) * width] += b;
+			}
+		}else{
+			int dX = abs(x1 - x0);
+			int dY = -abs(y1 - y0);
+			int sX = (x1 - x0) < 0? -1:1;
+			int sY = (y1 - y0) < 0? -1:1;
+			int err = dX + dY;
+			size_t x = x0, y = y0;
+			double NormalTan = -(B->Segments[i].x1 - B->Segments[i].x0) / (B->Segments[i].y1 - B->Segments[i].y0);
+			while (x != x1 && y != y1){					
+				double dPx = (Field[x + 1 + y * width] - Field[x - 1 + y * width]);
+				double dPy = (Field[x + (y - 1) * width] - Field[x + (y + 1) * width]);
+				double a, b, c, d;
+				a = Field[x + 1 + y * width] + (-dPy * NormalTan + Field[x - 1 + y * width] - Field[x + 1 + y * width]) * speed;
+				b = Field[x - 1 + y * width] + (dPy * NormalTan + Field[x + 1 + y * width] - Field[x - 1 + y * width]) * speed;
 
-		Avg /= NO_PENETRATION_DEPTH * 2 + 1;
-
-		for (int d = -NO_PENETRATION_DEPTH; d <= NO_PENETRATION_DEPTH; ++d){
-			Field[x + d + y * width] += (Avg - Field[x + d + y * width]) * speed;
-		}
-
-		// Y-axis
-		Avg = 0;
-
-		for (int d = -NO_PENETRATION_DEPTH; d <= NO_PENETRATION_DEPTH; ++d){
-			Avg += Field[x + (d + y) * width];
-		}
-
-		Avg /= NO_PENETRATION_DEPTH * 2 + 1;
-
-		for (int d = -NO_PENETRATION_DEPTH; d <= NO_PENETRATION_DEPTH; ++d){
-			Field[x + (d + y) * width] += (Avg - Field[x + (d + y) * width]) * speed;
-		}
-
-
-		// Main diagonal axis
-		Avg = 0;
-
-		for (int d = -NO_PENETRATION_DEPTH; d <= NO_PENETRATION_DEPTH; ++d){
-			Avg += Field[x + d + (d + y) * width];
-		}
-
-		Avg /= NO_PENETRATION_DEPTH * 2 + 1;
-
-		for (int d = -NO_PENETRATION_DEPTH; d <= NO_PENETRATION_DEPTH; ++d){
-			Field[x + d + (d + y) * width] += (Avg - Field[x + d + (d + y) * width]) * speed;
-		}
-
-		// Secondary diagonal axis
-		Avg = 0;
-
-		for (int d = -NO_PENETRATION_DEPTH; d <= NO_PENETRATION_DEPTH; ++d){
-			Avg += Field[x + d + (y - d) * width];
-		}
-
-		Avg /= NO_PENETRATION_DEPTH * 2 + 1;
-
-		for (int d = -NO_PENETRATION_DEPTH; d <= NO_PENETRATION_DEPTH; ++d){
-			Field[x + d + (y - d) * width] += (Avg - Field[x + d + (y - d) * width]) * speed;
+				c = Field[x + (y - 1) * width] + (-dPx / NormalTan + Field[x + (y + 1) * width] - Field[x + (y - 1) * width]) * speed;
+				d = Field[x + (y + 1) * width] + (dPx / NormalTan + Field[x + (y - 1) * width] - Field[x + (y + 1) * width]) * speed;
+				Field[x + 1 + y * width] = a;
+				Field[x - 1 + y * width] = b;
+				Field[x + (y - 1) * width] = c;
+				Field[x + (y + 1) * width] = d;
+				
+				if (2 * err >= dY){ 
+					err += dY;
+					x += sX;
+				}
+				if (2 * err <= dX){
+					err += dX;
+					y += sY;
+				}
+			}
 		}
 	}
 }
