@@ -96,7 +96,7 @@ void SolveForNoPenetration(double Field[], Boundary *B, size_t width, size_t hei
 			int sY = (y1 - y0) < 0? -1:1;
 			int err = dX + dY;
 			size_t x = x0, y = y0;
-			double NormalTan = -(B->Segments[i].x1 - B->Segments[i].x0) / (B->Segments[i].y1 - B->Segments[i].y0);
+			double NormalTan = fabs((B->Segments[i].x1 - B->Segments[i].x0) / (B->Segments[i].y1 - B->Segments[i].y0);
 			while (x != x1 && y != y1){					
 				double dPx = (Field[x + 1 + y * width] - Field[x - 1 + y * width]);
 				double dPy = (Field[x + (y - 1) * width] - Field[x + (y + 1) * width]);

@@ -92,7 +92,7 @@ void DrawIsopotentials(double Field[], size_t width, size_t height, int count){
 	for (double	C = ValMin; C < ValMax; C += (ValMax - ValMin) / (double)count){
 		for (size_t y = 0; y < height; y += 1){
 			for (size_t x = 0; x < width; x += 1){
-				if (fabs(Field[x + y * width]/C - 1) < 0.015)
+				if (fabs(Field[x + y * width]/C - 1) < 0.01)
 					putpixel(x, y, WHITE);
 			}
 		}
