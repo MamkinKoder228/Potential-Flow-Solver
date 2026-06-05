@@ -66,6 +66,7 @@ void SolveFieldDivergence(double Field[], size_t width, size_t height, double sp
 
 
 void SolveForNoPenetration(double Field[], Boundary *B, size_t width, size_t height, float speed){
+	double AvgCrossFlow = 0;
 	for (int i = 0; i < B->SegmentCount; ++i){
 		int x0 = B->Segments[i].x0;
 		int y0 = B->Segments[i].y0;
@@ -95,21 +96,29 @@ void SolveForNoPenetration(double Field[], Boundary *B, size_t width, size_t hei
 			int sX = (x1 - x0) < 0? -1:1;
 			int sY = (y1 - y0) < 0? -1:1;
 			int err = dX + dY;
-			size_t x = x0, y = y0;
-			double NormalTan = fabs((B->Segments[i].x1 - B->Segments[i].x0) / (B->Segments[i].y1 - B->Segments[i].y0);
+			int x = x0, y = y0;
+			double Nx = -(B->Segments[i].y1 - B->Segments[i].y0);
+			double Ny = (B->Segments[i].x1 - B->Segments[i].x0);
 			while (x != x1 && y != y1){					
 				double dPx = (Field[x + 1 + y * width] - Field[x - 1 + y * width]);
 				double dPy = (Field[x + (y - 1) * width] - Field[x + (y + 1) * width]);
+				double CrossFlow = dPx * Nx + dPy * Ny;
 				double a, b, c, d;
-				a = Field[x + 1 + y * width] + (-dPy * NormalTan + Field[x - 1 + y * width] - Field[x + 1 + y * width]) * speed;
-				b = Field[x - 1 + y * width] + (dPy * NormalTan + Field[x + 1 + y * width] - Field[x - 1 + y * width]) * speed;
+				AvgCrossFlow += fabs(CrossFlow);
+				// a = (-(CrossFlow - Field[x + 1 + y * width] * Nx) / Nx - Field[x + 1 + y * width]);
+				// b = ((CrossFlow + Field[x - 1 + y * width] * Nx) / Nx - Field[x - 1 + y * width]);
+				// c = (-(CrossFlow - Field[x + (y - 1) * width] * Ny) / Ny - Field[x + (y - 1) * width]);
+				// d = ((CrossFlow + Field[x + (y - 1) * width] * Ny) / Ny - Field[x + (y + 1) * width]);
 
-				c = Field[x + (y - 1) * width] + (-dPx / NormalTan + Field[x + (y + 1) * width] - Field[x + (y - 1) * width]) * speed;
-				d = Field[x + (y + 1) * width] + (dPx / NormalTan + Field[x + (y - 1) * width] - Field[x + (y + 1) * width]) * speed;
-				Field[x + 1 + y * width] = a;
-				Field[x - 1 + y * width] = b;
-				Field[x + (y - 1) * width] = c;
-				Field[x + (y + 1) * width] = d;
+				a = -CrossFlow * Nx;
+				b = -CrossFlow * Nx;
+				c = -CrossFlow * Ny;
+				d = -CrossFlow * Ny;
+
+				Field[x + 1 + y * width] += a * speed;
+				Field[x - 1 + y * width] += b * speed;
+				Field[x + (y - 1) * width] += c * speed;
+				Field[x + (y + 1) * width] += d * speed;
 				
 				if (2 * err >= dY){ 
 					err += dY;
@@ -122,4 +131,5 @@ void SolveForNoPenetration(double Field[], Boundary *B, size_t width, size_t hei
 			}
 		}
 	}
+	printf("%.3f\n", AvgCrossFlow);
 }

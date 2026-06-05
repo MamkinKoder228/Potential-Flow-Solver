@@ -1,11 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <fcntl.h>
 #include "render.c"
 #include "PotentialFlow.c"
 
-#define WIDTH 256
-#define HEIGHT 256
+#define WIDTH 128
+#define HEIGHT 128
 
 int main(void){
 	double *Field = malloc(WIDTH * HEIGHT * sizeof(double));
@@ -17,26 +16,22 @@ int main(void){
 
 
 	Boundary B = CreateBoundary();
-	BoundaryAddSegment(&B, WIDTH/2, HEIGHT/2 - 30, WIDTH/2, HEIGHT/2 + 30);
-	// BoundaryAddSegment(&B, WIDTH/2 + 10, HEIGHT/2 - 10, WIDTH/2 + 10, HEIGHT/2 + 10);
-	// BoundaryAddSegment(&B, WIDTH/2 + 10, HEIGHT/2 + 10, WIDTH/2 - 10, HEIGHT/2 + 10);
-	// BoundaryAddSegment(&B, WIDTH/2 - 10, HEIGHT/2 + 10, WIDTH/2 - 10, HEIGHT/2 - 10);
-	float R = 32;
+	// BoundaryAddSegment(&B, WIDTH/2 - 15, HEIGHT/2 + 15, WIDTH/2 + 15, HEIGHT/2 - 15);
+	float R = 16;
 	float dA = 0.2;
-	// for (float alpha = 0; alpha < 2 * M_PI; alpha += dA){
-	// 	BoundaryAddSegment(&B, WIDTH/2 + R * cos(alpha), HEIGHT/2 + R * sin(alpha), WIDTH/2 + R * cos(alpha + dA), HEIGHT/2 + R * sin(alpha + dA));
-	// 	// BoundaryAddSegment(&B, WIDTH/2 + R * cos(alpha) - 1, HEIGHT/2 + R * sin(alpha) - 1, WIDTH/2 + R * cos(alpha) - 1, HEIGHT/2 + R * sin(alpha) + 1);
-	// 	// BoundaryAddSegment(&B, WIDTH/2 + R * cos(alpha) - 1, HEIGHT/2 + R * sin(alpha) + 1, WIDTH/2 + R * cos(alpha) + 1, HEIGHT/2 + R * sin(alpha) + 1);
-	// 	// BoundaryAddSegment(&B, WIDTH/2 + R * cos(alpha) + 1, HEIGHT/2 + R * sin(alpha) + 1, WIDTH/2 + R * cos(alpha) + 1, HEIGHT/2 + R * sin(alpha) - 1);
-	// 	// BoundaryAddSegment(&B, WIDTH/2 + R * cos(alpha) + 1, HEIGHT/2 + R * sin(alpha) - 1, WIDTH/2 + R * cos(alpha) - 1, HEIGHT/2 + R * sin(alpha) - 1);
-	// }
+	for (float alpha = 0; alpha < 2 * M_PI; alpha += dA){
+		BoundaryAddSegment(&B, WIDTH/2 + R * cos(alpha), HEIGHT/2 + R * sin(alpha), WIDTH/2 + R * cos(alpha + dA), HEIGHT/2 + R * sin(alpha + dA));
+		// BoundaryAddSegment(&B, WIDTH/2 + R * cos(alpha) - 1, HEIGHT/2 + R * sin(alpha) - 1, WIDTH/2 + R * cos(alpha) - 1, HEIGHT/2 + R * sin(alpha) + 1);
+		// BoundaryAddSegment(&B, WIDTH/2 + R * cos(alpha) - 1, HEIGHT/2 + R * sin(alpha) + 1, WIDTH/2 + R * cos(alpha) + 1, HEIGHT/2 + R * sin(alpha) + 1);
+		// BoundaryAddSegment(&B, WIDTH/2 + R * cos(alpha) + 1, HEIGHT/2 + R * sin(alpha) + 1, WIDTH/2 + R * cos(alpha) + 1, HEIGHT/2 + R * sin(alpha) - 1);
+		// BoundaryAddSegment(&B, WIDTH/2 + R * cos(alpha) + 1, HEIGHT/2 + R * sin(alpha) - 1, WIDTH/2 + R * cos(alpha) - 1, HEIGHT/2 + R * sin(alpha) - 1);
+	}
 
 	float vel;
 	while (!(xkbhit() && lastkey() == 'q')){
-		SolveFieldDivergence(Field, WIDTH, HEIGHT, 1.6); 
-		SolveForNoPenetration(Field, &B, WIDTH, HEIGHT, 0.5);
-		// SolveForNoPenetration(Field, &B, WIDTH, HEIGHT, 0.1);
-		// SolveForNoPenetration(Field, &B, WIDTH, HEIGHT, 0.1);
+		SolveFieldDivergence(Field, WIDTH, HEIGHT, 1); 
+		SolveForNoPenetration(Field, &B, WIDTH, HEIGHT, 1e-1);
+		SolveForNoPenetration(Field, &B, WIDTH, HEIGHT, 1e-1);
 		DrawVelocityMagnitude(Field, WIDTH, HEIGHT, CMAP_BLR);
 		// DrawField(Field, WIDTH, HEIGHT, CMAP_NCV);
 		DrawBoundary(&B);
